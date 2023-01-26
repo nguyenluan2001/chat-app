@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import React, { ReactElement, ReactNode } from 'react';
+import React, { ReactElement, ReactNode, useState } from 'react';
 import { app } from '../../utils/firebase';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { useCreateUserWithEmailAndPassword } from 'react-firebase-hooks/auth';
@@ -11,6 +11,7 @@ import {
   CardContent,
   TextField,
   Button,
+  Typography,
 } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 import { Controller, useForm } from 'react-hook-form';
@@ -27,15 +28,28 @@ interface IForm {
   email: string;
   password: string;
 }
+type IAuthErrorCode = Record<string, string>;
+const AUTH_ERROR_CODE: IAuthErrorCode = {
+  'auth/wrong-password': 'Wrong password',
+  'auth/too-many-requests': 'Too many request',
+};
 const SignIn = (): ReactElement => {
   const navigate = useNavigate();
+  const [error, setError] = useState<string>('');
   const onSubmit = async (values: IForm) => {
     const { email, password } = values;
     console.log('values', values);
-    const response = await signInWithEmailAndPassword(auth, email, password);
-    console.log('response', response);
-    navigate('/');
+    signInWithEmailAndPassword(auth, email, password)
+      .then((user) => {
+        navigate('/');
+      })
+      .catch((error) => {
+        console.log('code', error?.code);
+        console.log('AUTH_ERROR', AUTH_ERROR_CODE[error.code]);
+        setError(AUTH_ERROR_CODE[error.code]);
+      });
   };
+  console.log('error', error);
   const {
     control,
     handleSubmit,
@@ -51,7 +65,7 @@ const SignIn = (): ReactElement => {
   return (
     <Stack>
       <Card sx={{ width: '40vw' }}>
-        <CardHeader title="Sign In"></CardHeader>
+        <CardHeader title="Sign In" />
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)}>
             <Stack
@@ -92,6 +106,14 @@ const SignIn = (): ReactElement => {
                   />
                 )}
               />
+              {Boolean(error) && (
+                <Typography
+                  variant="body1"
+                  sx={{ color: error ? 'red' : 'black' }}
+                >
+                  {error}
+                </Typography>
+              )}
               <LoadingButton
                 variant="contained"
                 type="submit"

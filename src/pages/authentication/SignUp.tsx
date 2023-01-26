@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import React, { ReactElement, ReactNode } from 'react';
-import { app } from '../../utils/firebase';
+import React, { ReactElement, ReactNode, useEffect } from 'react';
+import { app, db, firestore } from '../../utils/firebase';
 import { getAuth } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useCreateUserWithEmailAndPassword } from 'react-firebase-hooks/auth';
 import {
   Stack,
@@ -32,13 +33,26 @@ interface IForm {
   password: string;
 }
 const SignUp = (): ReactElement => {
-  const [createUserWithEmailAndPassword, loading, error] =
+  const [createUserWithEmailAndPassword, user, loading, error] =
     useCreateUserWithEmailAndPassword(auth);
   const navigate = useNavigate();
+  useEffect(() => {
+    const handleStoreUser = async () => {
+      if (user != null) {
+        await setDoc(doc(firestore, 'users', user?.user?.uid), {
+          email: user?.user?.email,
+          authentication_uid: user?.user?.uid,
+          rooms: [],
+        });
+        navigate('/');
+        console.log('====user====', user);
+      }
+    };
+    handleStoreUser();
+  }, [user]);
   const onSubmit = async (values: IForm) => {
     const { email, password } = values;
     await createUserWithEmailAndPassword(email, password);
-    navigate('/');
   };
   const {
     control,
@@ -57,7 +71,7 @@ const SignUp = (): ReactElement => {
   return (
     <Stack>
       <Card sx={{ width: '40vw' }}>
-        <CardHeader title="Sign Up"></CardHeader>
+        <CardHeader title="Sign Up" />
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)}>
             <Stack

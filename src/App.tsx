@@ -14,6 +14,8 @@ import SignIn from './pages/authentication/SignIn';
 import SignUp from './pages/authentication/SignUp';
 import Home from '@/pages/Home';
 import UnAuthenticationRoute from '@/routes/UnAuthenticationRoute';
+import { Provider } from 'react-redux';
+import { store } from 'redux/store';
 
 function App(): ReactElement {
   const [user, loading, error] = useAuthState(auth);
@@ -44,10 +46,10 @@ function App(): ReactElement {
     },
   ]);
   useEffect(() => {
-    if (user == null && location.pathname === '/') {
+    if (user == null && location.pathname === '/' && !loading) {
       navigate('/auth/sign-in');
     }
-  }, [user]);
+  }, [user, loading]);
   return (
     <div
       className="App"
@@ -73,7 +75,7 @@ function App(): ReactElement {
         <Route
           path="/"
           element={<Home />}
-        ></Route>
+        />
       </Routes>
     </div>
   );

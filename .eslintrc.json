@@ -24,6 +24,12 @@
         "@typescript-eslint/triple-slash-reference": 0,
         "https://typescript-eslint.io/rules/no-misused-promises": 0,
         "no-unused-vars":1,
-        "@typescript-eslint/no-unused-vars":1
+        "@typescript-eslint/no-unused-vars":1,
+        "@typescript-eslint/strict-boolean-expressions":1,
+        "react/self-closing-comp": [1, {
+            "component": true,
+            "html": true
+        }]
+
     }
 }
