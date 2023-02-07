@@ -2,7 +2,17 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { setCurrentRoom } from '@/redux/slices/chat';
 import { db } from '@/utils/firebase';
 import { IMessage, IRoomItem, IUser } from '@/utils/models';
-import { Avatar, Stack, Typography } from '@mui/material';
+import {
+  Avatar,
+  Box,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Stack,
+  Typography,
+} from '@mui/material';
 import {
   equalTo,
   get,
@@ -15,8 +25,18 @@ import {
   ref,
   update,
 } from 'firebase/database';
-import React, { ReactElement, useEffect, useState } from 'react';
+import React, {
+  ReactElement,
+  ReactEventHandler,
+  useEffect,
+  useState,
+} from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import dotsHorizontalCircleOutline from '@iconify/icons-mdi/dots-horizontal-circle-outline';
+import accountCancel from '@iconify/icons-mdi/account-cancel';
+import deleteForever from '@iconify/icons-mdi/delete-forever';
+import { Icon } from '@iconify/react';
+
 type TLastestMessage = [string, IMessage];
 const ChatItem: React.FC<{
   room: IRoomItem;
@@ -27,6 +47,8 @@ const ChatItem: React.FC<{
     (state) => state?.chat?.sessions?.[user?.uid]
   );
   const [lastestMessage, setLatestMessage] = useState<any>();
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const open = Boolean(anchorEl);
   const dispatch = useDispatch();
   useEffect(() => {
     const roomRef = ref(db, `rooms/${room?.uid}`);
@@ -68,6 +90,12 @@ const ChatItem: React.FC<{
       })
     );
   };
+  const handleClickOption = (e: React.MouseEvent<HTMLButtonElement>): void => {
+    setAnchorEl(e.currentTarget);
+  };
+  const handleCloseOption = (): void => {
+    setAnchorEl(null);
+  };
   console.log('currentRoom', currentRoom);
   return (
     <Stack
@@ -106,6 +134,40 @@ const ChatItem: React.FC<{
           </Typography>
         </Stack>
       </Stack>
+      <Box sx={{ flex: 1 }} />
+      <IconButton>
+        <Icon
+          icon={dotsHorizontalCircleOutline}
+          style={{
+            fontSize: '32px',
+            color: 'rgb(151,153,158)',
+            height: 'fit-content',
+          }}
+          onClick={handleClickOption}
+        />
+      </IconButton>
+      <Menu
+        id="basic-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleCloseOption}
+        MenuListProps={{
+          'aria-labelledby': 'basic-button',
+        }}
+      >
+        <MenuItem>
+          <ListItemIcon>
+            <Icon icon={accountCancel} style={{fontSize:'24px'}} />
+          </ListItemIcon>
+          <ListItemText>Block</ListItemText>
+        </MenuItem>
+        <MenuItem>
+          <ListItemIcon>
+            <Icon icon={deleteForever} style={{fontSize:'24px'}} />
+          </ListItemIcon>
+          <ListItemText>Delete chat</ListItemText>
+        </MenuItem>
+      </Menu>
     </Stack>
   );
 };

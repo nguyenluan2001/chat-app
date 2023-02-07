@@ -41,9 +41,6 @@ const Home = (): ReactElement => {
       );
     }
   }, [user?.uid]);
-  const handleSignOut = async (): Promise<void> => {
-    await signOut(auth);
-  };
   const handleToggleChatInformation = (): void => {
     setIsOpenChatInformation((pre) => !pre);
   };
@@ -52,12 +49,6 @@ const Home = (): ReactElement => {
       direction="column"
       sx={{ width: '100vw', height: '100vh', background: 'rgb(36,37,38)' }}
     >
-      <Button
-        variant="contained"
-        onClick={handleSignOut}
-      >
-        Sign Out
-      </Button>
       <Header />
       <Grid
         container={true}
