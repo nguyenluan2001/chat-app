@@ -1,10 +1,15 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { setCurrentRoom } from '@/redux/slices/chat';
-import { db } from '@/utils/firebase';
+import { db, firestore } from '@/utils/firebase';
 import { IMessage, IRoomItem, IUser } from '@/utils/models';
 import {
   Avatar,
   Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   ListItemIcon,
   ListItemText,
@@ -35,7 +40,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import dotsHorizontalCircleOutline from '@iconify/icons-mdi/dots-horizontal-circle-outline';
 import accountCancel from '@iconify/icons-mdi/account-cancel';
 import deleteForever from '@iconify/icons-mdi/delete-forever';
+import closeCircleOutline from '@iconify/icons-mdi/close-circle-outline';
 import { Icon } from '@iconify/react';
+import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 
 type TLastestMessage = [string, IMessage];
 const ChatItem: React.FC<{
@@ -50,6 +57,8 @@ const ChatItem: React.FC<{
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const open = Boolean(anchorEl);
   const dispatch = useDispatch();
+  const [isBlocked, setIsBlocked] = useState<boolean>(false);
+  const [isOpenDialog, setIsOpenDialog] = useState<boolean>(false);
   useEffect(() => {
     const roomRef = ref(db, `rooms/${room?.uid}`);
     const _query = query(roomRef, limitToLast(1));
@@ -58,6 +67,20 @@ const ChatItem: React.FC<{
       data = Object.entries(data);
       setLatestMessage(data?.[0]);
     });
+  }, []);
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(firestore, 'users', user?.uid as string),
+      (doc) => {
+        const data = doc.data();
+        const _room = data?.rooms?.find((item) => {
+          return item?.uid === room?.uid;
+        });
+        console.log('🚀 ===== useEffect ===== room', _room);
+        setIsBlocked(_room?.isBlocked);
+      }
+    );
+    return unsub;
   }, []);
   const handleSeenMessage = async (): Promise<void> => {
     const roomRef = ref(db, `rooms/${room?.uid}`);
@@ -68,15 +91,15 @@ const ChatItem: React.FC<{
       limitToLast(1)
     );
     get(_query).then(
-      (snapshot) => {
+      async (snapshot) => {
         const _lastMessage = Object.entries(snapshot.val())?.[0];
         console.log('==== unSeenMessage ====', Object.entries(snapshot.val()));
-        const updates = {};
+        const updates: Record<string, any> = {};
         updates[`/rooms/${room?.uid}/${_lastMessage?.[0]}`] = {
           ..._lastMessage?.[1],
           isSeen: true,
         };
-        update(ref(db), updates);
+        await update(ref(db), updates);
       },
       () => {}
     );
@@ -95,6 +118,68 @@ const ChatItem: React.FC<{
   };
   const handleCloseOption = (): void => {
     setAnchorEl(null);
+  };
+  const handleBlock = async (): Promise<void> => {
+    const userRef = doc(firestore, 'users', user?.uid);
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+      let rooms = docSnap.data().rooms;
+      rooms = rooms?.map((item) => {
+        if (item?.uid === room?.uid) {
+          return {
+            ...item,
+            isBlocked: true,
+          };
+        }
+        return item;
+      });
+      console.log('🚀 ===== rooms=rooms?.map ===== rooms', rooms);
+      await updateDoc(userRef, {
+        rooms,
+      });
+    }
+  };
+  const handleRemoveBlock = async (): Promise<void> => {
+    const userRef = doc(firestore, 'users', user?.uid);
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+      let rooms = docSnap.data().rooms;
+      rooms = rooms?.map((item) => {
+        if (item?.uid === room?.uid) {
+          return {
+            ...item,
+            isBlocked: false,
+          };
+        }
+        return item;
+      });
+      console.log('🚀 ===== rooms=rooms?.map ===== rooms', rooms);
+      await updateDoc(userRef, {
+        rooms,
+      });
+    }
+  };
+  const onClickDeleteChat = (): void => {
+    setAnchorEl(null);
+    setIsOpenDialog(true);
+  };
+  const handleCloseDialog = (): void => {
+    setIsOpenDialog(false);
+  };
+  const handleDeleteChat = async (): Promise<void> => {
+    const userRef = doc(firestore, 'users', user?.uid);
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+      let rooms = docSnap.data().rooms;
+      rooms = rooms?.filter((item: IRoomItem) => {
+        return item?.uid !== room?.uid;
+      });
+      console.log('🚀 ===== rooms=rooms?.map ===== rooms', rooms);
+      await updateDoc(userRef, {
+        rooms,
+      });
+      handleCloseDialog();
+    }
   };
   console.log('currentRoom', currentRoom);
   return (
@@ -155,21 +240,78 @@ const ChatItem: React.FC<{
           'aria-labelledby': 'basic-button',
         }}
       >
-        <MenuItem>
+        {!isBlocked && (
+          <MenuItem onClick={handleBlock}>
+            <ListItemIcon>
+              <Icon
+                icon={accountCancel}
+                style={{ fontSize: '24px' }}
+              />
+            </ListItemIcon>
+            <ListItemText>Block</ListItemText>
+          </MenuItem>
+        )}
+        {isBlocked && (
+          <MenuItem onClick={handleRemoveBlock}>
+            <ListItemIcon>
+              <Icon
+                icon={accountCancel}
+                style={{ fontSize: '24px' }}
+              />
+            </ListItemIcon>
+            <ListItemText>Remove block</ListItemText>
+          </MenuItem>
+        )}
+        <MenuItem onClick={onClickDeleteChat}>
           <ListItemIcon>
-            <Icon icon={accountCancel} style={{fontSize:'24px'}} />
-          </ListItemIcon>
-          <ListItemText>Block</ListItemText>
-        </MenuItem>
-        <MenuItem>
-          <ListItemIcon>
-            <Icon icon={deleteForever} style={{fontSize:'24px'}} />
+            <Icon
+              icon={deleteForever}
+              style={{ fontSize: '24px' }}
+            />
           </ListItemIcon>
           <ListItemText>Delete chat</ListItemText>
         </MenuItem>
       </Menu>
+      <ConfirmDeleteChatDialog
+        open={isOpenDialog}
+        handleClose={handleCloseDialog}
+        handleDeleteChat={handleDeleteChat}
+      />
     </Stack>
   );
 };
-
+const ConfirmDeleteChatDialog: React.FC<{
+  open: boolean;
+  handleClose: () => void;
+  handleDeleteChat: () => void;
+}> = ({ open, handleClose, handleDeleteChat }) => {
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+    >
+      <DialogTitle>
+        <Typography>Delete chat</Typography>
+        <IconButton
+          sx={{ position: 'absolute', top: '5px', right: '5px' }}
+          onClick={handleClose}
+        >
+          <Icon icon={closeCircleOutline} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent>
+        You cannot undo after deleting a copy of this conversation.
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          onClick={handleDeleteChat}
+        >
+          Delete chat
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 export default ChatItem;

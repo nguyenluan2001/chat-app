@@ -14,4 +14,5 @@ export interface IUser {
 export interface IRoomItem {
   uid: string;
   members: IUser[];
+  isBlocked: boolean;
 }

@@ -32,6 +32,7 @@ type IAuthErrorCode = Record<string, string>;
 const AUTH_ERROR_CODE: IAuthErrorCode = {
   'auth/wrong-password': 'Wrong password',
   'auth/too-many-requests': 'Too many request',
+  'auth/user-not-found': 'User not found',
 };
 const SignIn = (): ReactElement => {
   const navigate = useNavigate();
@@ -46,10 +47,10 @@ const SignIn = (): ReactElement => {
       .catch((error) => {
         console.log('code', error?.code);
         console.log('AUTH_ERROR', AUTH_ERROR_CODE[error.code]);
-        setError(AUTH_ERROR_CODE[error.code]);
+        setError(() => AUTH_ERROR_CODE[error.code]);
       });
+    console.log('error', error);
   };
-  console.log('error', error);
   const {
     control,
     handleSubmit,
@@ -67,7 +68,10 @@ const SignIn = (): ReactElement => {
       <Card sx={{ width: '40vw' }}>
         <CardHeader title="Sign In" />
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            data-testid="sign-in-form"
+          >
             <Stack
               direction="column"
               spacing={2}
@@ -83,7 +87,12 @@ const SignIn = (): ReactElement => {
                     fullWidth={true}
                     error={Boolean(errors?.email)}
                     helperText={
-                      Boolean(errors?.email) && errors?.email?.message
+                      <p
+                        data-testid="email-validate"
+                        style={{ margin: 0 }}
+                      >
+                        {Boolean(errors?.email) && errors?.email?.message}
+                      </p>
                     }
                     {...field}
                   />
@@ -100,7 +109,12 @@ const SignIn = (): ReactElement => {
                     fullWidth={true}
                     error={Boolean(errors?.password)}
                     helperText={
-                      Boolean(errors?.password) && errors?.password?.message
+                      <p
+                        data-testid="password-validate"
+                        style={{ margin: 0 }}
+                      >
+                        {Boolean(errors?.password) && errors?.password?.message}
+                      </p>
                     }
                     {...field}
                   />
@@ -110,6 +124,7 @@ const SignIn = (): ReactElement => {
                 <Typography
                   variant="body1"
                   sx={{ color: error ? 'red' : 'black' }}
+                  data-testid="unauthentication"
                 >
                   {error}
                 </Typography>

@@ -78,6 +78,7 @@ const Sidebar = (): ReactElement => {
       const newRoom = {
         uid: roomUID,
         members: restUsers,
+        isBlocked: false,
       };
       console.log('====== usershot =====', userShot);
       if (userShot.exists()) {

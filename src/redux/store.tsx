@@ -6,3 +6,4 @@ export const store = configureStore({
     chat: ChatReducer,
   },
 });
+export type RootState = ReturnType<typeof store.getState>;

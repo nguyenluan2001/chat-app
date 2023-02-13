@@ -1,19 +1,42 @@
-import { IconButton, Stack, TextField } from '@mui/material';
-import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  IconButton,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import React, { useEffect, useState } from 'react';
 import sendIcon from '@iconify/icons-mdi/send';
 import { Icon } from '@iconify/react';
-import { auth, db } from '../utils/firebase';
+import { auth, db, firestore } from '../utils/firebase';
 import { push, ref, set } from 'firebase/database';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useSelector } from 'react-redux';
+import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { IRoomItem } from '@/utils/models';
+import { RootState } from '@/redux/store';
 
 const ChatToolbar: React.FC = () => {
   const [user] = useAuthState(auth);
   const [message, setMessage] = useState<string>('');
   const { currentRoom } = useSelector(
-    (state) => state.chat?.sessions?.[user?.uid]
+    (state: RootState) => state?.chat?.sessions?.[user?.uid as string]
   );
-  console.log('==== user====', user);
+  const [isBlocked, setIsBlocked] = useState<boolean>(false);
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(firestore, 'users', user?.uid as string),
+      (doc) => {
+        const data = doc.data();
+        const room = data?.rooms?.find(
+          (item: IRoomItem) => item?.uid === currentRoom?.uid
+        );
+        setIsBlocked(room?.isBlocked);
+      }
+    );
+    return unsub;
+  }, []);
   const handleSendMessage = async (
     e: React.FormEvent<HTMLFormElement>
   ): Promise<void> => {
@@ -31,6 +54,13 @@ const ChatToolbar: React.FC = () => {
     const value = e.target.value;
     setMessage(value);
   };
+  if (isBlocked)
+    return (
+      <BlockedToolbar
+        userUID={user?.uid as string}
+        room={currentRoom}
+      />
+    );
   return (
     <form onSubmit={handleSendMessage}>
       <Stack
@@ -67,6 +97,55 @@ const ChatToolbar: React.FC = () => {
         </IconButton>
       </Stack>
     </form>
+  );
+};
+const BlockedToolbar: React.FC<{ userUID: string; room: IRoomItem }> = ({
+  userUID,
+  room,
+}) => {
+  const handleRemoveBlock = async (): Promise<void> => {
+    const userRef = doc(firestore, 'users', userUID);
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+      let rooms = docSnap.data().rooms;
+      rooms = rooms?.map((item: IRoomItem) => {
+        if (item?.uid === room?.uid) {
+          return {
+            ...item,
+            isBlocked: false,
+          };
+        }
+        return item;
+      });
+      console.log('🚀 ===== rooms=rooms?.map ===== rooms', rooms);
+      await updateDoc(userRef, {
+        rooms,
+      });
+    }
+  };
+  return (
+    <Box sx={{ p: 2 }}>
+      <Typography
+        variant="body1"
+        sx={{ textAlign: 'center' }}
+      >
+        You have blocked messages and calls from Bao Ngoc's Facebook account
+      </Typography>
+      <Typography
+        variant="body2"
+        sx={{ textAlign: 'center' }}
+      >
+        You cannot text or call them in this chat, nor receive their messages or
+        calls.
+      </Typography>
+      <Button
+        variant="contained"
+        fullWidth={true}
+        onClick={handleRemoveBlock}
+      >
+        Remove block
+      </Button>
+    </Box>
   );
 };
 

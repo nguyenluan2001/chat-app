@@ -8,7 +8,7 @@ interface ChatState {
       currentRoom: IRoomItem;
     }
   >;
-  currentRoom: any;
+  currentRoom: IRoomItem | null;
 }
 
 const initialState: ChatState = {

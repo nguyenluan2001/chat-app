@@ -19,6 +19,8 @@
     "paths": {
         "@/components": ["components"],
         "@/components/*": ["components/*"],
+        "@/pages/*": ["pages/*"],
+        "@/pages": ["pages"],
         "@/utils": ["utils"],
         "@/utils/*": ["utils/*"],
         "@/hooks": ["hooks"],
@@ -26,6 +28,6 @@
         "@/redux/*": ["redux/*"],
       }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "vite.config.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
